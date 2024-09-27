@@ -1,6 +1,20 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
+from datetime import datetime
+from login import login, is_authenticated
+import re
+
+# Verifica se o usuário está autenticado
+if not is_authenticated():
+    login()
+    st.stop()
+
+
+# Função para sanitizar o nome do arquivo, removendo caracteres inválidos
+def sanitize_filename(filename):
+    # Substitui caracteres inválidos para nomes de arquivos no Windows
+    return re.sub(r'[<>:"/\\|?*]', '', filename)
 
 # Função para gerar o PDF
 class PDF(FPDF):
@@ -29,8 +43,13 @@ class PDF(FPDF):
         self.multi_cell(0, 6, response)
         self.ln(4)
 
-    def add_responsible(self, reviewer_name):
-        # Formatação do nome do revisor ajustada
+    def add_responsible(self, reviewer_name, generation_date):
+        # Adiciona a data de geração e o responsável pela revisão
+        self.set_font("Arial", "B", 12)
+        self.cell(55, 10, f"Data de Geração: ", 0, 0)
+        self.set_font("Arial", "", 12)
+        self.cell(0, 10, generation_date, 0, 1)
+        self.ln(5)
         self.set_font("Arial", "B", 12)
         self.cell(55, 10, "Responsável pela Revisão: ", 0, 0)
         self.set_font("Arial", "", 12)
@@ -41,9 +60,10 @@ def generate_pdf(dataframe, logo_path, output_filename):
     pdf = PDF(logo_path)
     pdf.add_page()
 
-    # Adiciona o nome do responsável pela revisão
+    # Adiciona a data de geração no formato brasileiro
+    generation_date = datetime.now().strftime("%d/%m/%Y - %H:%M")
     reviewer_name = dataframe['Reviewer Names'].iloc[0]
-    pdf.add_responsible(reviewer_name)
+    pdf.add_responsible(reviewer_name, generation_date)
 
     # Itera sem ordenar para manter a ordem original do CSV
     current_section = None
@@ -64,7 +84,13 @@ def generate_pdf(dataframe, logo_path, output_filename):
     return output_filename
 
 # Interface do Streamlit
-st.title("Conversor de CSV para PDF")
+# Configurações da página com o logo
+st.set_page_config(page_title="Century Data", page_icon="Century_mini_logo-32x32.png")
+
+# Adiciona o logo ao topo da página
+st.image("logo_site.png", use_column_width=True)
+
+st.title("Gerador de PDF do PIA em Preenchimento")
 st.write("Faça upload do CSV para converter para PDF.")
 
 # Upload do CSV
@@ -74,19 +100,23 @@ if uploaded_file:
     # Carrega o CSV em um DataFrame
     df = pd.read_csv(uploaded_file)
 
-    # Gera o nome do arquivo PDF baseado no nome do arquivo CSV
-    csv_filename = uploaded_file.name
-    pdf_filename = csv_filename.rsplit('.', 1)[0] + ".pdf"
+    # Gera o nome do arquivo PDF com o primeiro valor da coluna Section
+    first_section_value = df['Response Option(s)'].iloc[0] if not df['Response Option(s)'].empty else "output"
+    sanitized_filename = sanitize_filename(first_section_value)
+    pdf_filename = f"{sanitized_filename}.pdf"
 
     # Gera o PDF usando o logo presente na raiz do projeto
     logo_path = "logo.png"  # Caminho para o logo fixo na raiz do projeto
     pdf_file = generate_pdf(df, logo_path, pdf_filename)
 
     # Exibe o botão para download do PDF com o nome correspondente
-    with open(pdf_file, "rb") as pdf:
-        st.download_button(
-            label="Baixar PDF",
-            data=pdf,
-            file_name=pdf_filename,
-            mime="application/pdf"
-        )
+    download_button = st.download_button(
+        label="Baixar PDF",
+        data=open(pdf_file, "rb").read(),
+        file_name=pdf_filename,
+        mime="application/pdf"
+    )
+
+    # Mostra os balões após o clique no botão de download
+    if download_button:
+        st.balloons()
