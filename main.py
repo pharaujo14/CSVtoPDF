@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from fpdf import FPDF
-from datetime import datetime
+from datetime import datetime, timedelta
 from login import login, is_authenticated
 import re
 
@@ -9,7 +9,6 @@ import re
 if not is_authenticated():
     login()
     st.stop()
-
 
 # Função para sanitizar o nome do arquivo, removendo caracteres inválidos
 def sanitize_filename(filename):
@@ -60,9 +59,13 @@ def generate_pdf(dataframe, logo_path, output_filename):
     pdf = PDF(logo_path)
     pdf.add_page()
 
-    # Adiciona a data de geração no formato brasileiro
-    generation_date = datetime.now().strftime("%d/%m/%Y - %H:%M")
+    # Subtrai 3 horas da data e hora atuais
+    generation_date = (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y - %H:%M")
+
+    # Obtém o nome do revisor da primeira linha do dataframe
     reviewer_name = dataframe['Reviewer Names'].iloc[0]
+
+    # Adiciona o nome do responsável e a data de geração ao PDF
     pdf.add_responsible(reviewer_name, generation_date)
 
     # Itera sem ordenar para manter a ordem original do CSV

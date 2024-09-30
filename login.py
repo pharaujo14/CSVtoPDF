@@ -1,15 +1,12 @@
 import streamlit as st
 
-
 # Função de autenticação
 def login():
-
     # Adiciona o logo ao topo da página
     st.image("logo_site.png", use_column_width=True)
 
     # Obtém as credenciais do arquivo secrets.toml
-    stored_username = st.secrets["credentials"]["username"]
-    stored_password = st.secrets["credentials"]["password"]
+    credentials = st.secrets["credentials"]
 
     # Campos de entrada para o usuário e senha
     st.title("Login")
@@ -18,7 +15,7 @@ def login():
 
     # Validação das credenciais
     if st.button("Entrar"):
-        if username == stored_username and password == stored_password:
+        if username in credentials and password == credentials[username]:
             st.session_state['logged_in'] = True
         else:
             st.error("Usuário ou senha incorretos.")
