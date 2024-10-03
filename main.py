@@ -4,6 +4,7 @@ from fpdf import FPDF
 from datetime import datetime, timedelta
 from login import login, is_authenticated
 import re
+import unicodedata
 
 # Verifica se o usuário está autenticado
 if not is_authenticated():
@@ -14,6 +15,15 @@ if not is_authenticated():
 def sanitize_filename(filename):
     # Substitui caracteres inválidos para nomes de arquivos no Windows
     return re.sub(r'[<>:"/\\|?*]', '', filename)
+    
+def normalize_text(text):
+    """
+    Normaliza o texto para remover caracteres especiais que não são suportados pelo FPDF.
+    Substitui caracteres acentuados e símbolos por versões simples.
+    """
+    if isinstance(text, str):
+        return unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
+    return text
 
 # Função para obter o valor da célula, verificando em PT ou EN
 def get_column_value(df, col_name_pt, col_name_en, row_index, default_value="Sem resposta"):
@@ -81,7 +91,7 @@ def generate_pdf(dataframe, logo_path, output_filename):
     generation_date = (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y - %H:%M")
 
     # Obtém o nome do revisor da primeira linha do dataframe (PT ou EN)
-    reviewer_name = get_column_value(dataframe, 'Nomes dos revisores', 'Reviewer Names', 0)
+    reviewer_name = normalize_text(get_column_value(dataframe, 'Nomes dos revisores', 'Reviewer Names', 0))
 
     # Adiciona o nome do responsável e a data de geração ao PDF
     pdf.add_responsible(reviewer_name, generation_date)
@@ -90,21 +100,22 @@ def generate_pdf(dataframe, logo_path, output_filename):
     current_section = None
     for index, row in dataframe.iterrows():
         # Seção (PT ou EN)
-        section = get_column_value(dataframe, 'Seção', 'Section', index)
+        section = normalize_text(get_column_value(dataframe, 'Seção', 'Section', index))
         if section != current_section:
             current_section = section
             pdf.chapter_title(section)
 
         # Formatação da pergunta e resposta
         pdf.question_format(
-            get_column_value(dataframe, 'Número da pergunta', 'Question Number', index),
-            get_column_value(dataframe, 'Pergunta', 'Question', index),
-            get_column_value(dataframe, 'Opção (s) de resposta', 'Response Option(s)', index, "Sem resposta")
+            normalize_text(get_column_value(dataframe, 'Número da pergunta', 'Question Number', index)),
+            normalize_text(get_column_value(dataframe, 'Pergunta', 'Question', index)),
+            normalize_text(get_column_value(dataframe, 'Opção (s) de resposta', 'Response Option(s)', index, "Sem resposta"))
         )
 
     # Salva o PDF gerado com o nome especificado
     pdf.output(output_filename)
     return output_filename
+
 
 # Interface do Streamlit
 # Configurações da página com o logo

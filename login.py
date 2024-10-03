@@ -2,6 +2,10 @@ import streamlit as st
 
 # Função de autenticação
 def login():
+
+    # Configurações da página com o logo
+    st.set_page_config(page_title="Century Data", page_icon="Century_mini_logo-32x32.png")
+
     # Adiciona o logo ao topo da página
     st.image("logo_site.png", use_column_width=True)
 
