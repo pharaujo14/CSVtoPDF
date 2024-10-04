@@ -21,6 +21,8 @@ def login():
     if st.button("Entrar"):
         if username in credentials and password == credentials[username]:
             st.session_state['logged_in'] = True
+            st.session_state['username'] = username  # Salva o nome do usuário na sessão
+            st.success(f"Bem-vindo, {username}!")
         else:
             st.error("Usuário ou senha incorretos.")
 
