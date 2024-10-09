@@ -14,15 +14,21 @@ def login():
 
     # Campos de entrada para o usuário e senha
     st.title("Login")
-    username = st.text_input("Usuário")
-    password = st.text_input("Senha", type="password")
+    
+    # Aqui permite que o Enter envie o formulário de login
+    login_form = st.form(key="login_form")
+    username = login_form.text_input("Usuário")
+    password = login_form.text_input("Senha", type="password")
 
-    # Validação das credenciais
-    if st.button("Entrar"):
+    # Validação das credenciais ao enviar o formulário
+    login_button = login_form.form_submit_button("Entrar")
+
+    if login_button:
         if username in credentials and password == credentials[username]:
             st.session_state['logged_in'] = True
             st.session_state['username'] = username  # Salva o nome do usuário na sessão
             st.success(f"Bem-vindo, {username}!")
+            st.experimental_rerun()  # Força a página a recarregar após o login
         else:
             st.error("Usuário ou senha incorretos.")
 
