@@ -40,6 +40,24 @@ if not is_authenticated():
 def sanitize_filename(filename):
     return re.sub(r'[<>:"/\\|?*]', '', filename)
 
+# Função para obter o valor da célula, verificando em PT ou EN
+def get_column_value(df, col_name_pt, col_name_en, row_index, default_value="Sem resposta"):
+    """
+    Verifica se a coluna existe no DataFrame, primeiro em português (PT) e, se não encontrar, busca em inglês (EN).
+    Retorna o valor da célula como string ou um valor padrão.
+    """
+    if col_name_pt in df.columns:
+        value = df[col_name_pt].iloc[row_index]
+    elif col_name_en in df.columns:
+        value = df[col_name_en].iloc[row_index]
+    else:
+        return default_value
+
+    # Garante que o valor é uma string, tratando NaN e outros tipos
+    if pd.isna(value):
+        return default_value
+    return str(value)
+
 # Função para gerar o PDF
 class PDF(FPDF):
     def __init__(self, logo_path):
@@ -84,8 +102,8 @@ def generate_pdf(dataframe, logo_path, output_filename):
     # Subtrai 3 horas da data e hora atuais
     generation_date = (datetime.now() - timedelta(hours=3)).strftime("%d/%m/%Y - %H:%M")
 
-    # Obtém o nome do revisor da primeira linha do dataframe
-    reviewer_name = dataframe['Reviewer Names'].iloc[0]
+    # Obtém o nome do revisor da primeira linha do dataframe (PT ou EN)
+    reviewer_name = get_column_value(dataframe, 'Nomes dos revisores', 'Reviewer Names', 0)
 
     # Adiciona o nome do responsável e a data de geração ao PDF
     pdf.add_responsible(reviewer_name, generation_date)
@@ -93,15 +111,17 @@ def generate_pdf(dataframe, logo_path, output_filename):
     # Itera sem ordenar para manter a ordem original do CSV
     current_section = None
     for index, row in dataframe.iterrows():
-        section = row['Section']
+        # Seção (PT ou EN)
+        section = get_column_value(dataframe, 'Seção', 'Section', index)
         if section != current_section:
             current_section = section
             pdf.chapter_title(section)
 
+        # Formatação da pergunta e resposta
         pdf.question_format(
-            row['Question Number'],
-            row['Question'],
-            row['Response Option(s)'] if pd.notna(row['Response Option(s)']) else "Sem resposta"
+            get_column_value(dataframe, 'Número da pergunta', 'Question Number', index),
+            get_column_value(dataframe, 'Pergunta', 'Question', index),
+            get_column_value(dataframe, 'Opção (s) de resposta', 'Response Option(s)', index, "Sem resposta")
         )
 
     # Salva o PDF gerado com o nome especificado
@@ -121,8 +141,8 @@ uploaded_file = st.file_uploader("Escolha um arquivo CSV", type="csv")
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    # Gera o nome do arquivo PDF com o primeiro valor da coluna Section
-    first_section_value = df['Response Option(s)'].iloc[0] if not df['Response Option(s)'].empty else "output"
+    # Gera o nome do arquivo PDF com o primeiro valor da coluna 'Response Option(s)' (PT ou EN)
+    first_section_value = get_column_value(df, 'Opção (s) de resposta', 'Response Option(s)', 0, "output")
     sanitized_filename = sanitize_filename(first_section_value)
     pdf_filename = f"{sanitized_filename}.pdf"
 
