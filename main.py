@@ -7,6 +7,7 @@ import re
 import smtplib
 from email.mime.text import MIMEText
 import unicodedata
+from cadastra_user import trocar_senha
 
 # Função para normalizar texto
 def normalize_text(text):
@@ -134,6 +135,21 @@ st.image("logo_site.png", use_column_width=True)
 
 st.title("Gerador de PDF do PIA em Preenchimento")
 st.write("Faça upload do CSV para converter para PDF.")
+
+# Filtros e seleção de período
+with st.sidebar:
+    
+    st.image("logo_site.png", width=150)
+
+    # Definindo uma flag de sessão para mostrar o formulário de troca de senha
+    if 'mostrar_form_troca_senha' not in st.session_state:
+        st.session_state.mostrar_form_troca_senha = False
+
+    if st.button("Trocar Senha"):
+        st.session_state.mostrar_form_troca_senha = not st.session_state.mostrar_form_troca_senha
+
+    if st.session_state.mostrar_form_troca_senha:
+        trocar_senha()
 
 # Upload do CSV
 uploaded_file = st.file_uploader("Escolha um arquivo CSV", type="csv")
